@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Invoice Generator{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Manage your invoices on the go</p>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Quick Actions -->
+    <div class="card quick-actions">
+        <h2 class="card-title">Quick Actions</h2>
+        <div class="action-buttons">
+            {% if template %}
+            <a href="{{ url_for('create_bill') }}" class="btn btn-primary btn-large">
+                <span class="btn-icon">➕</span>
+                <span>Create New Bill</span>
+            </a>
+            {% else %}
+            <a href="{{ url_for('template') }}" class="btn btn-primary btn-large">
+                <span class="btn-icon">📋</span>
+                <span>Setup Business Template</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('history') }}" class="btn btn-secondary btn-large">
+                <span class="btn-icon">📚</span>
+                <span>View History</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Template Status -->
+    <div class="card template-status">
+        <h2 class="card-title">Business Template</h2>
+        {% if template %}
+        <div class="status-badge success">
+            <span class="badge-icon">✓</span>
+            <span>Template Configured</span>
+        </div>
+        <div class="template-info">
+            <p><strong>{{ template.business_name }}</strong></p>
+            <p>{{ template.owner_name }}</p>
+            <p>{{ template.mobile }}</p>
+            {% if template.gst_number %}
+            <p class="gst-badge">GST: {{ template.gst_number }}</p>
+            {% endif %}
+        </div>
+        <a href="{{ url_for('template') }}" class="btn btn-outline">Edit Template</a>
+        {% else %}
+        <div class="status-badge warning">
+            <span class="badge-icon">⚠</span>
+            <span>Template Not Set</span>
+        </div>
+        <p class="status-message">Setup your business template to start creating bills.</p>
+        <a href="{{ url_for('template') }}" class="btn btn-primary">Setup Now</a>
+        {% endif %}
+    </div>
+
+    <!-- Recent Bills -->
+    <div class="card recent-bills">
+        <h2 class="card-title">Recent Bills</h2>
+        {% if recent_bills %}
+        <ul class="bill-list">
+            {% for bill in recent_bills %}
+            <li class="bill-item">
+                <a href="{{ url_for('preview_bill', bill_id=bill.id) }}" class="bill-link">
+                    <div class="bill-info">
+                        <span class="bill-number">{{ bill.bill_number }}</span>
+                        <span class="bill-customer">{{ bill.customer_name }}</span>
+                    </div>
+                    <div class="bill-meta">
+                        <span class="bill-amount">₹{{ "%.2f"|format(bill.total) }}</span>
+                        <span class="bill-date">{{ bill.created_at[:10] }}</span>
+                    </div>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        <a href="{{ url_for('history') }}" class="btn btn-outline">View All</a>
+        {% else %}
+        <p class="empty-state">No bills created yet.</p>
+        {% if template %}
+        <a href="{{ url_for('create_bill') }}" class="btn btn-primary">Create First Bill</a>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

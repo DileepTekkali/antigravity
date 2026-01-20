@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}Bill #{{ bill.bill_number }} - Invoice Generator{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-row">
+        <div>
+            <h1 class="page-title">Bill Preview</h1>
+            <p class="page-subtitle">{{ bill.bill_number }}</p>
+        </div>
+        <a href="{{ url_for('create_bill') }}" class="btn btn-outline">
+            <span class="btn-icon">➕</span>
+            New Bill
+        </a>
+    </div>
+</div>
+
+<!-- Bill Preview Container -->
+<div class="bill-preview-wrapper">
+    <div class="bill-preview" id="billPreview">
+        <!-- Header -->
+        <div class="bill-header">
+            {% if template.logo_path %}
+            <img src="{{ url_for('uploaded_file', filename=template.logo_path) }}" alt="Logo" class="bill-logo">
+            {% endif %}
+            <div class="bill-business-info">
+                <h1 class="business-name">{{ template.business_name }}</h1>
+                <p class="business-address">{{ template.business_address }}</p>
+                <p class="business-contact">📞 {{ template.mobile }}</p>
+                {% if template.gst_number and bill.gst_enabled %}
+                <p class="business-gst">GSTIN: {{ template.gst_number }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="bill-title-bar">
+            <span class="bill-title">TAX INVOICE</span>
+            <span class="bill-number-display">{{ bill.bill_number }}</span>
+        </div>
+
+        <!-- Bill Details -->
+        <div class="bill-details">
+            <div class="bill-to">
+                <h3>Bill To:</h3>
+                <p class="customer-name">{{ bill.customer_name }}</p>
+                {% if bill.customer_mobile %}
+                <p>📞 {{ bill.customer_mobile }}</p>
+                {% endif %}
+                {% if bill.customer_address %}
+                <p>{{ bill.customer_address }}</p>
+                {% endif %}
+            </div>
+            <div class="bill-meta-info">
+                <p><strong>Date:</strong> {{ bill.created_at[:10] }}</p>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <table class="bill-items-table">
+            <thead>
+                <tr>
+                    <th class="col-sno">#</th>
+                    <th class="col-name">Item</th>
+                    <th class="col-qty">Qty</th>
+                    <th class="col-rate">Rate</th>
+                    <th class="col-amount">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>₹{{ "%.2f"|format(item.rate) }}</td>
+                    <td>₹{{ "%.2f"|format(item.amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Totals -->
+        <div class="bill-totals">
+            <div class="totals-table">
+                <div class="total-row">
+                    <span>Subtotal</span>
+                    <span>₹{{ "%.2f"|format(bill.subtotal) }}</span>
+                </div>
+                {% if bill.gst_enabled %}
+                <div class="total-row">
+                    <span>GST ({{ bill.gst_percentage }}%)</span>
+                    <span>₹{{ "%.2f"|format(bill.gst_amount) }}</span>
+                </div>
+                {% endif %}
+                <div class="total-row grand-total">
+                    <span>Grand Total</span>
+                    <span>₹{{ "%.2f"|format(bill.total) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bill-footer">
+            <div class="signature-section">
+                {% if template.signature_path %}
+                <img src="{{ url_for('uploaded_file', filename=template.signature_path) }}" alt="Signature"
+                    class="signature-image">
+                {% endif %}
+                <p class="signature-line">Authorized Signature</p>
+                <p class="owner-name">{{ template.owner_name }}</p>
+            </div>
+            {% if template.stamp_data %}
+            <div class="stamp-section">
+                <img src="{{ template.stamp_data }}" alt="Stamp" class="stamp-image">
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="bill-thank-you">
+            <p>Thank you for your business!</p>
+        </div>
+    </div>
+</div>
+
+<!-- Export Actions -->
+<div class="export-actions">
+    <button class="btn btn-primary btn-export" onclick="downloadPDF()">
+        <span class="btn-icon">📄</span>
+        Download PDF
+    </button>
+    <button class="btn btn-secondary btn-export" onclick="downloadJPEG()">
+        <span class="btn-icon">🖼️</span>
+        Download JPEG
+    </button>
+    <button class="btn btn-secondary btn-export" onclick="printBill()">
+        <span class="btn-icon">🖨️</span>
+        Print
+    </button>
+    <button class="btn btn-secondary btn-export" onclick="shareBill()">
+        <span class="btn-icon">📤</span>
+        Share
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/export.js') }}"></script>
+<script>
+    // Set bill number for export filename
+    window.billNumber = "{{ bill.bill_number }}";
+</script>
+{% endblock %}

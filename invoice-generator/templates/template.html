@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block title %}Business Template - Invoice Generator{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Business Template</h1>
+    <p class="page-subtitle">Configure your business details</p>
+</div>
+
+<form class="template-form" method="POST" enctype="multipart/form-data" id="templateForm">
+    <!-- Mandatory Fields -->
+    <div class="form-section">
+        <h2 class="section-title">Required Information</h2>
+
+        <div class="form-group">
+            <label for="business_name" class="form-label">Business Name *</label>
+            <input type="text" id="business_name" name="business_name" class="form-input"
+                value="{{ template.business_name if template else '' }}" required
+                placeholder="Enter your business name">
+        </div>
+
+        <div class="form-group">
+            <label for="business_address" class="form-label">Business Address *</label>
+            <textarea id="business_address" name="business_address" class="form-input form-textarea" required
+                placeholder="Enter complete business address">{{ template.business_address if template else '' }}</textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="owner_name" class="form-label">Owner Name *</label>
+                <input type="text" id="owner_name" name="owner_name" class="form-input"
+                    value="{{ template.owner_name if template else '' }}" required placeholder="Owner's name">
+            </div>
+            <div class="form-group">
+                <label for="mobile" class="form-label">Mobile *</label>
+                <input type="tel" id="mobile" name="mobile" class="form-input"
+                    value="{{ template.mobile if template else '' }}" required placeholder="Mobile number">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="default_date" class="form-label">Default Date</label>
+            <input type="date" id="default_date" name="default_date" class="form-input"
+                value="{{ template.default_date if template and template.default_date else '' }}">
+            <span class="form-hint">Leave empty to use today's date on bills</span>
+        </div>
+    </div>
+
+    <!-- Optional Fields -->
+    <div class="form-section">
+        <h2 class="section-title">Optional Information</h2>
+
+        <div class="form-group">
+            <label for="gst_number" class="form-label">GST Number</label>
+            <input type="text" id="gst_number" name="gst_number" class="form-input"
+                value="{{ template.gst_number if template else '' }}" placeholder="e.g., 22AAAAA0000A1Z5">
+        </div>
+
+        <div class="form-group">
+            <label for="logo" class="form-label">Business Logo (PNG)</label>
+            <div class="file-upload">
+                <input type="file" id="logo" name="logo" accept="image/png" class="file-input">
+                <div class="file-upload-area" id="logoUploadArea">
+                    {% if template and template.logo_path %}
+                    <img src="{{ url_for('uploaded_file', filename=template.logo_path) }}" alt="Logo"
+                        class="preview-image" id="logoPreview">
+                    <span class="file-name">Logo saved</span>
+                    {% else %}
+                    <span class="upload-icon">📷</span>
+                    <span class="upload-text">Tap to upload</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="signature" class="form-label">Signature</label>
+            <div class="file-upload">
+                <input type="file" id="signature" name="signature" accept="image/png,image/jpeg" class="file-input">
+                <div class="file-upload-area" id="signatureUploadArea">
+                    {% if template and template.signature_path %}
+                    <img src="{{ url_for('uploaded_file', filename=template.signature_path) }}" alt="Signature"
+                        class="preview-image" id="signaturePreview">
+                    <span class="file-name">Signature saved</span>
+                    {% else %}
+                    <span class="upload-icon">✍️</span>
+                    <span class="upload-text">Tap to upload</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stamp Section -->
+    <div class="form-section">
+        <h2 class="section-title">Business Stamp</h2>
+
+        <!-- Upload Stamp Option (shown when auto-generate is OFF) -->
+        <div class="stamp-upload-section" id="stampUploadSection"
+            style="display: {{ 'none' if template and template.stamp_data else 'block' }};">
+            <div class="form-group">
+                <label for="stamp_upload" class="form-label">Upload Stamp Image</label>
+                <div class="file-upload">
+                    <input type="file" id="stamp_upload" name="stamp_upload" accept="image/png,image/jpeg"
+                        class="file-input">
+                    <div class="file-upload-area" id="stampUploadArea">
+                        {% if template and template.stamp_upload_path %}
+                        <img src="{{ url_for('uploaded_file', filename=template.stamp_upload_path) }}" alt="Stamp"
+                            class="preview-image" id="stampUploadPreview">
+                        <span class="file-name">Stamp saved</span>
+                        {% else %}
+                        <span class="upload-icon">🔵</span>
+                        <span class="upload-text">Tap to upload stamp</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auto Generate Toggle -->
+        <div class="toggle-group">
+            <label class="toggle-label">
+                <input type="checkbox" id="autoGenerateStamp" class="toggle-input" {{ 'checked' if template and
+                    template.stamp_data else '' }}>
+                <span class="toggle-slider"></span>
+                <span class="toggle-text">Auto-Generate Stamp</span>
+            </label>
+        </div>
+
+        <!-- Auto Generate Options (shown when toggle is ON) -->
+        <div class="stamp-options" id="stampOptions"
+            style="display: {{ 'block' if template and template.stamp_data else 'none' }};">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="stamp_business_name" class="form-label">Name on Stamp *</label>
+                    <input type="text" id="stamp_business_name" name="stamp_business_name" class="form-input"
+                        value="{{ template.stamp_business_name if template and template.stamp_business_name else '' }}"
+                        placeholder="Business name for stamp">
+                </div>
+                <div class="form-group">
+                    <label for="stamp_place" class="form-label">Place *</label>
+                    <input type="text" id="stamp_place" name="stamp_place" class="form-input"
+                        value="{{ template.stamp_place if template and template.stamp_place else '' }}"
+                        placeholder="City/Town">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Stamp Shape</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="stamp_type" value="circle" {{ 'checked' if template and
+                            template.stamp_type=='circle' else 'checked' if not template else '' }}>
+                        <span class="radio-custom"></span>
+                        <span>Circle</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="stamp_type" value="rectangle" {{ 'checked' if template and
+                            template.stamp_type=='rectangle' else '' }}>
+                        <span class="radio-custom"></span>
+                        <span>Rectangle</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="stamp-preview">
+                <label class="form-label">Preview</label>
+                <div class="stamp-canvas-container">
+                    <canvas id="stampCanvas" width="180" height="180"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <input type="hidden" name="stamp_data" id="stampData" value="{{ template.stamp_data if template else '' }}">
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-large btn-full">
+            💾 Save Template
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/stamp.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        initStampGenerator();
+    });
+</script>
+{% endblock %}

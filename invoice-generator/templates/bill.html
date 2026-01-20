@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Bill - Invoice Generator{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Create New Bill</h1>
+    <p class="page-subtitle">{{ template.business_name }}</p>
+</div>
+
+<form class="bill-form" method="POST" id="billForm">
+    <!-- Customer Details -->
+    <div class="form-section">
+        <h2 class="section-title">
+            <span class="section-icon">👤</span>
+            Customer Details
+        </h2>
+
+        <div class="form-group">
+            <label for="customer_name" class="form-label">Customer Name *</label>
+            <input type="text" id="customer_name" name="customer_name" class="form-input" required
+                placeholder="Enter customer name">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="customer_mobile" class="form-label">Mobile Number</label>
+                <input type="tel" id="customer_mobile" name="customer_mobile" class="form-input" placeholder="Optional">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="customer_address" class="form-label">Address</label>
+            <textarea id="customer_address" name="customer_address" class="form-input form-textarea"
+                placeholder="Optional customer address"></textarea>
+        </div>
+    </div>
+
+    <!-- Items Section -->
+    <div class="form-section">
+        <h2 class="section-title">
+            <span class="section-icon">📦</span>
+            Items
+        </h2>
+
+        <div class="items-container" id="itemsContainer">
+            <div class="item-row" data-index="0">
+                <div class="item-fields">
+                    <div class="form-group item-name-group">
+                        <label class="form-label">Item Name</label>
+                        <input type="text" name="item_name[]" class="form-input item-name" placeholder="Item name"
+                            required>
+                    </div>
+                    <div class="form-group item-qty-group">
+                        <label class="form-label">Qty</label>
+                        <input type="number" name="quantity[]" class="form-input item-qty" placeholder="0" min="0"
+                            step="0.01" value="1" required>
+                    </div>
+                    <div class="form-group item-rate-group">
+                        <label class="form-label">Rate (₹)</label>
+                        <input type="number" name="rate[]" class="form-input item-rate" placeholder="0.00" min="0"
+                            step="0.01" required>
+                    </div>
+                    <div class="form-group item-amount-group">
+                        <label class="form-label">Amount</label>
+                        <span class="item-amount">₹0.00</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-remove-item" onclick="removeItem(this)" style="display:none;">
+                    ✕
+                </button>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-outline btn-add-item" onclick="addItem()">
+            <span class="btn-icon">➕</span>
+            Add Item
+        </button>
+    </div>
+
+    <!-- GST Section -->
+    <div class="form-section">
+        <h2 class="section-title">
+            <span class="section-icon">📊</span>
+            Tax Settings
+        </h2>
+
+        <div class="toggle-group">
+            <label class="toggle-label">
+                <input type="checkbox" id="gstEnabled" name="gst_enabled" class="toggle-input">
+                <span class="toggle-slider"></span>
+                <span class="toggle-text">Enable GST</span>
+            </label>
+        </div>
+
+        <div class="gst-options" id="gstOptions" style="display: none;">
+            <div class="form-group">
+                <label for="gst_percentage" class="form-label">GST Percentage (%)</label>
+                <input type="number" id="gst_percentage" name="gst_percentage" class="form-input" placeholder="18"
+                    min="0" max="100" step="0.01" value="18">
+            </div>
+            {% if template.gst_number %}
+            <p class="gst-info">GST Number: <strong>{{ template.gst_number }}</strong></p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Totals Section -->
+    <div class="form-section totals-section">
+        <div class="totals-grid">
+            <div class="total-row">
+                <span class="total-label">Subtotal</span>
+                <span class="total-value" id="subtotal">₹0.00</span>
+            </div>
+            <div class="total-row gst-row" id="gstRow" style="display: none;">
+                <span class="total-label">GST (<span id="gstLabel">18</span>%)</span>
+                <span class="total-value" id="gstAmount">₹0.00</span>
+            </div>
+            <div class="total-row grand-total">
+                <span class="total-label">Grand Total</span>
+                <span class="total-value" id="grandTotal">₹0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-large btn-full">
+            <span class="btn-icon">👁️</span>
+            Preview Bill
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let itemIndex = 1;
+
+    // Add new item row
+    function addItem() {
+        const container = document.getElementById('itemsContainer');
+        const newRow = document.createElement('div');
+        newRow.className = 'item-row';
+        newRow.dataset.index = itemIndex;
+
+        newRow.innerHTML = `
+            <div class="item-fields">
+                <div class="form-group item-name-group">
+                    <input type="text" name="item_name[]" class="form-input item-name" 
+                           placeholder="Item name" required>
+                </div>
+                <div class="form-group item-qty-group">
+                    <input type="number" name="quantity[]" class="form-input item-qty" 
+                           placeholder="0" min="0" step="0.01" value="1" required>
+                </div>
+                <div class="form-group item-rate-group">
+                    <input type="number" name="rate[]" class="form-input item-rate" 
+                           placeholder="0.00" min="0" step="0.01" required>
+                </div>
+                <div class="form-group item-amount-group">
+                    <span class="item-amount">₹0.00</span>
+                </div>
+            </div>
+            <button type="button" class="btn-remove-item" onclick="removeItem(this)">
+                ✕
+            </button>
+        `;
+
+        container.appendChild(newRow);
+        itemIndex++;
+
+        // Focus on the new item name field
+        const newItemName = newRow.querySelector('.item-name');
+        newItemName.focus();
+
+        // Show remove buttons
+        updateRemoveButtons();
+
+        // Add event listeners
+        addRowEventListeners(newRow);
+    }
+
+    // Remove item row
+    function removeItem(btn) {
+        const row = btn.closest('.item-row');
+        row.remove();
+        updateRemoveButtons();
+        calculateTotals();
+    }
+
+    // Update remove button visibility
+    function updateRemoveButtons() {
+        const rows = document.querySelectorAll('.item-row');
+        rows.forEach((row, index) => {
+            const removeBtn = row.querySelector('.btn-remove-item');
+            if (removeBtn) {
+                removeBtn.style.display = rows.length > 1 ? 'flex' : 'none';
+            }
+        });
+    }
+
+    // Add event listeners to a row
+    function addRowEventListeners(row) {
+        const qty = row.querySelector('.item-qty');
+        const rate = row.querySelector('.item-rate');
+
+        qty.addEventListener('input', () => calculateRowAmount(row));
+        rate.addEventListener('input', () => calculateRowAmount(row));
+    }
+
+    // Calculate row amount
+    function calculateRowAmount(row) {
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+        const rate = parseFloat(row.querySelector('.item-rate').value) || 0;
+        const amount = qty * rate;
+        row.querySelector('.item-amount').textContent = `₹${amount.toFixed(2)}`;
+        calculateTotals();
+    }
+
+    // Calculate totals
+    function calculateTotals() {
+        let subtotal = 0;
+        document.querySelectorAll('.item-row').forEach(row => {
+            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+            const rate = parseFloat(row.querySelector('.item-rate').value) || 0;
+            subtotal += qty * rate;
+        });
+
+        document.getElementById('subtotal').textContent = `₹${subtotal.toFixed(2)}`;
+
+        const gstEnabled = document.getElementById('gstEnabled').checked;
+        const gstPercentage = parseFloat(document.getElementById('gst_percentage').value) || 0;
+
+        let gstAmount = 0;
+        if (gstEnabled) {
+            gstAmount = subtotal * gstPercentage / 100;
+            document.getElementById('gstAmount').textContent = `₹${gstAmount.toFixed(2)}`;
+            document.getElementById('gstLabel').textContent = gstPercentage;
+        }
+
+        const grandTotal = subtotal + gstAmount;
+        document.getElementById('grandTotal').textContent = `₹${grandTotal.toFixed(2)}`;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function () {
+        // Add event listeners to first row
+        const firstRow = document.querySelector('.item-row');
+        addRowEventListeners(firstRow);
+
+        // GST toggle
+        document.getElementById('gstEnabled').addEventListener('change', function () {
+            document.getElementById('gstOptions').style.display = this.checked ? 'block' : 'none';
+            document.getElementById('gstRow').style.display = this.checked ? 'flex' : 'none';
+            calculateTotals();
+        });
+
+        // GST percentage change
+        document.getElementById('gst_percentage').addEventListener('input', calculateTotals);
+    });
+</script>
+{% endblock %}

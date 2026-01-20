@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Bill History - Invoice Generator{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Bill History</h1>
+    <p class="page-subtitle">All your generated invoices</p>
+</div>
+
+<!-- Search Bar -->
+<div class="search-section">
+    <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input"
+            placeholder="Search by customer name or bill number...">
+    </div>
+</div>
+
+{% if bills %}
+<div class="history-list" id="historyList">
+    {% for bill in bills %}
+    <a href="{{ url_for('preview_bill', bill_id=bill.id) }}" class="history-card"
+        data-customer="{{ bill.customer_name|lower }}" data-bill="{{ bill.bill_number|lower }}">
+        <div class="history-card-header">
+            <span class="bill-number-badge">{{ bill.bill_number }}</span>
+            <span class="bill-date">{{ bill.created_at[:10] }}</span>
+        </div>
+        <div class="history-card-body">
+            <h3 class="customer-name">{{ bill.customer_name }}</h3>
+            {% if bill.customer_mobile %}
+            <p class="customer-contact">📞 {{ bill.customer_mobile }}</p>
+            {% endif %}
+        </div>
+        <div class="history-card-footer">
+            <span class="total-amount">₹{{ "%.2f"|format(bill.total) }}</span>
+            <span class="view-arrow">→</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state-container">
+    <div class="empty-state-icon">📋</div>
+    <h2 class="empty-state-title">No Bills Yet</h2>
+    <p class="empty-state-text">Start creating bills to see them here.</p>
+    <a href="{{ url_for('create_bill') }}" class="btn btn-primary">
+        <span class="btn-icon">➕</span>
+        Create First Bill
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', function (e) {
+        const query = e.target.value.toLowerCase();
+        const cards = document.querySelectorAll('.history-card');
+
+        cards.forEach(card => {
+            const customer = card.dataset.customer;
+            const billNum = card.dataset.bill;
+
+            if (customer.includes(query) || billNum.includes(query)) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}
