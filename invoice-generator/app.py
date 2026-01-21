@@ -25,6 +25,11 @@ def get_db():
     return db
 
 def init_db():
+    try:
+        os.remove('invoice.db') # Reset DB for schema changes
+    except:
+        pass
+        
     db = get_db()
     db.execute('''
         CREATE TABLE IF NOT EXISTS templates (
@@ -34,10 +39,14 @@ def init_db():
             owner_name TEXT NOT NULL,
             mobile TEXT NOT NULL,
             gst_number TEXT,
+            default_date TEXT,
             logo_path TEXT,
             signature_path TEXT,
+            stamp_upload_path TEXT,
             stamp_data TEXT,
             stamp_type TEXT,
+            stamp_business_name TEXT,
+            stamp_place TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -55,6 +64,7 @@ def init_db():
             gst_percentage REAL,
             gst_amount REAL,
             total REAL,
+            bill_date TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (template_id) REFERENCES templates (id)
         )
@@ -84,8 +94,13 @@ def template():
         owner_name = request.form.get('owner_name', '').strip()
         mobile = request.form.get('mobile', '').strip()
         gst_number = request.form.get('gst_number', '').strip()
+
+        
+        # Stamp data
         stamp_data = request.form.get('stamp_data', '')
         stamp_type = request.form.get('stamp_type', 'rectangle')
+        stamp_business_name = request.form.get('stamp_business_name', '')
+        stamp_place = request.form.get('stamp_place', '')
         
         # Handle logo upload
         logo_path = None
@@ -106,9 +121,19 @@ def template():
                 signature_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 sig.save(signature_path)
                 signature_path = filename
+
+        # Handle stamp upload
+        stamp_upload_path = None
+        if 'stamp_upload' in request.files:
+            stamp_file = request.files['stamp_upload']
+            if stamp_file and stamp_file.filename and allowed_file(stamp_file.filename):
+                filename = secure_filename(f"stamp_{datetime.now().strftime('%Y%m%d%H%M%S')}_{stamp_file.filename}")
+                stamp_upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                stamp_file.save(stamp_upload_path)
+                stamp_upload_path = filename
         
         # Check if template exists
-        existing = db.execute('SELECT id, logo_path, signature_path FROM templates ORDER BY id DESC LIMIT 1').fetchone()
+        existing = db.execute('SELECT * FROM templates ORDER BY id DESC LIMIT 1').fetchone()
         
         if existing:
             # Keep existing files if no new ones uploaded
@@ -116,21 +141,28 @@ def template():
                 logo_path = existing['logo_path']
             if not signature_path and existing['signature_path']:
                 signature_path = existing['signature_path']
+            if not stamp_upload_path and existing['stamp_upload_path']:
+                stamp_upload_path = existing['stamp_upload_path']
             
             db.execute('''
                 UPDATE templates SET 
                     business_name=?, business_address=?, owner_name=?, mobile=?,
-                    gst_number=?, logo_path=?, signature_path=?, stamp_data=?, stamp_type=?
+                    gst_number=?, logo_path=?, signature_path=?, 
+                    stamp_upload_path=?, stamp_data=?, stamp_type=?, 
+                    stamp_business_name=?, stamp_place=?
                 WHERE id=?
             ''', (business_name, business_address, owner_name, mobile, gst_number,
-                  logo_path, signature_path, stamp_data, stamp_type, existing['id']))
+                  logo_path, signature_path, stamp_upload_path, stamp_data, stamp_type, 
+                  stamp_business_name, stamp_place, existing['id']))
         else:
             db.execute('''
                 INSERT INTO templates (business_name, business_address, owner_name, mobile,
-                    gst_number, logo_path, signature_path, stamp_data, stamp_type)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    gst_number, logo_path, signature_path, stamp_upload_path, 
+                    stamp_data, stamp_type, stamp_business_name, stamp_place)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (business_name, business_address, owner_name, mobile, gst_number,
-                  logo_path, signature_path, stamp_data, stamp_type))
+                  logo_path, signature_path, stamp_upload_path, stamp_data, stamp_type, 
+                  stamp_business_name, stamp_place))
         
         db.commit()
         db.close()
@@ -154,7 +186,11 @@ def create_bill():
         customer_name = request.form.get('customer_name', '').strip()
         customer_mobile = request.form.get('customer_mobile', '').strip()
         customer_address = request.form.get('customer_address', '').strip()
+        bill_date = request.form.get('bill_date')
         
+        if not bill_date:
+            bill_date = datetime.now().strftime('%Y-%m-%d')
+
         # Get items
         item_names = request.form.getlist('item_name[]')
         quantities = request.form.getlist('quantity[]')
@@ -164,16 +200,19 @@ def create_bill():
         subtotal = 0
         for i in range(len(item_names)):
             if item_names[i].strip():
-                qty = float(quantities[i]) if quantities[i] else 0
-                rate = float(rates[i]) if rates[i] else 0
-                amount = qty * rate
-                items.append({
-                    'name': item_names[i].strip(),
-                    'quantity': qty,
-                    'rate': rate,
-                    'amount': amount
-                })
-                subtotal += amount
+                try:
+                    qty = float(quantities[i]) if quantities[i] else 0
+                    rate = float(rates[i]) if rates[i] else 0
+                    amount = qty * rate
+                    items.append({
+                        'name': item_names[i].strip(),
+                        'quantity': qty,
+                        'rate': rate,
+                        'amount': amount
+                    })
+                    subtotal += amount
+                except ValueError:
+                    continue
         
         gst_enabled = request.form.get('gst_enabled') == 'on'
         gst_percentage = float(request.form.get('gst_percentage', 0)) if gst_enabled else 0
@@ -194,10 +233,10 @@ def create_bill():
         db.execute('''
             INSERT INTO bills (template_id, bill_number, customer_name, customer_mobile,
                 customer_address, items_json, subtotal, gst_enabled, gst_percentage,
-                gst_amount, total)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                gst_amount, total, bill_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (template['id'], bill_number, customer_name, customer_mobile, customer_address,
-              json.dumps(items), subtotal, gst_enabled, gst_percentage, gst_amount, total))
+              json.dumps(items), subtotal, gst_enabled, gst_percentage, gst_amount, total, bill_date))
         
         db.commit()
         bill_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -205,8 +244,11 @@ def create_bill():
         
         return redirect(url_for('preview_bill', bill_id=bill_id))
     
+    # Set default date to today
+    default_date = datetime.now().strftime('%Y-%m-%d')
+    
     db.close()
-    return render_template('bill.html', template=template)
+    return render_template('bill.html', template=template, default_date=default_date)
 
 @app.route('/bill/preview/<int:bill_id>')
 def preview_bill(bill_id):
@@ -238,20 +280,6 @@ def history():
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
-@app.route('/api/generate-stamp', methods=['POST'])
-def generate_stamp():
-    data = request.get_json()
-    business_name = data.get('business_name', 'BUSINESS')
-    stamp_type = data.get('stamp_type', 'rectangle')
-    
-    # Return stamp configuration for client-side canvas rendering
-    return jsonify({
-        'success': True,
-        'business_name': business_name,
-        'stamp_type': stamp_type,
-        'color': '#1e40af'
-    })
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

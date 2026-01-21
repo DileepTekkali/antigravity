@@ -3,7 +3,10 @@
 function initStampGenerator() {
     const autoGenerateToggle = document.getElementById('autoGenerateStamp');
     const stampOptions = document.getElementById('stampOptions');
-    const businessNameInput = document.getElementById('business_name');
+    const stampUploadSection = document.getElementById('stampUploadSection');
+
+    const stampNameInput = document.getElementById('stamp_business_name');
+    const stampPlaceInput = document.getElementById('stamp_place');
     const stampTypeInputs = document.querySelectorAll('input[name="stamp_type"]');
     const stampDataInput = document.getElementById('stampData');
     const canvas = document.getElementById('stampCanvas');
@@ -12,167 +15,221 @@ function initStampGenerator() {
 
     const ctx = canvas.getContext('2d');
 
-    // Toggle stamp options visibility
     autoGenerateToggle.addEventListener('change', function () {
-        stampOptions.style.display = this.checked ? 'block' : 'none';
         if (this.checked) {
+            stampOptions.style.display = 'block';
+            stampUploadSection.style.display = 'none';
             generateStamp();
         } else {
+            stampOptions.style.display = 'none';
+            stampUploadSection.style.display = 'block';
             stampDataInput.value = '';
-            clearCanvas();
         }
     });
 
-    // Regenerate stamp when name changes
-    if (businessNameInput) {
-        businessNameInput.addEventListener('input', debounce(generateStamp, 300));
-    }
+    [stampNameInput, stampPlaceInput].forEach(input => {
+        if (input) {
+            input.addEventListener('input', debounce(generateStamp, 200));
+            input.addEventListener('change', generateStamp);
+        }
+    });
 
-    // Regenerate stamp when type changes
     stampTypeInputs.forEach(input => {
         input.addEventListener('change', generateStamp);
     });
 
-    // Initial generation if toggle is checked
-    if (autoGenerateToggle.checked) {
-        generateStamp();
+    const mainBusinessName = document.getElementById('business_name');
+    const mainBusinessAddress = document.getElementById('business_address');
+
+    if (mainBusinessName) {
+        mainBusinessName.addEventListener('input', function () {
+            if (autoGenerateToggle.checked && stampNameInput) {
+                stampNameInput.value = this.value;
+                generateStamp();
+            }
+        });
     }
 
-    function clearCanvas() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (mainBusinessAddress) {
+        mainBusinessAddress.addEventListener('input', function () {
+            if (autoGenerateToggle.checked && stampPlaceInput) {
+                const val = this.value;
+                const city = val.includes(',') ? val.split(',').pop().trim() : val;
+                stampPlaceInput.value = city;
+                generateStamp();
+            }
+        });
     }
+
+    if (autoGenerateToggle.checked) generateStamp();
 
     function generateStamp() {
         if (!autoGenerateToggle.checked) return;
 
-        const businessName = businessNameInput?.value || 'BUSINESS';
-        const stampType = document.querySelector('input[name="stamp_type"]:checked')?.value || 'rectangle';
+        const name = (stampNameInput?.value || 'SEAL').toUpperCase();
+        const place = (stampPlaceInput?.value || '').toUpperCase();
+        const stampType = document.querySelector('input[name="stamp_type"]:checked')?.value || 'circle';
 
-        clearCanvas();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
-        const stampColor = '#1e40af'; // Blue color for official look
+        const stampColor = '#1e3a8a';
 
         ctx.strokeStyle = stampColor;
         ctx.fillStyle = stampColor;
-        ctx.lineWidth = 3;
-        ctx.font = 'bold 14px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
 
         if (stampType === 'circle') {
-            drawCircleStamp(ctx, centerX, centerY, businessName, stampColor);
+            drawCircleStamp(ctx, centerX, centerY, name, place, stampColor);
         } else {
-            drawRectangleStamp(ctx, centerX, centerY, businessName, stampColor);
+            drawRectangleStamp(ctx, centerX, centerY, name, place, stampColor);
         }
 
-        // Save stamp data as base64
         stampDataInput.value = canvas.toDataURL('image/png');
     }
 
-    function drawCircleStamp(ctx, centerX, centerY, businessName, color) {
-        const radius = 80;
+    function drawCircleStamp(ctx, centerX, centerY, name, place, color) {
+        const radius = 75;
+        const innerRadius = 52;
+        const textRadius = (radius + innerRadius) / 2;
 
-        // Outer circle
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.stroke();
+        // Draw Circles
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2); ctx.stroke();
 
-        // Inner circle
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius - 8, 0, Math.PI * 2);
-        ctx.stroke();
+        let fontSize = 13;
+        const kerningFactor = 1.15; // Fixed spacing factor for a "neat" look
 
-        // Business name curved at top
-        ctx.save();
-        ctx.translate(centerX, centerY);
+        // Measurement loop to find the best font size that fits both texts with stars
+        function calculateLayout(fSize) {
+            ctx.font = `bold ${fSize}px Inter`;
 
-        const text = businessName.toUpperCase();
-        const anglePerChar = 0.12;
-        const startAngle = -Math.PI / 2 - (text.length * anglePerChar) / 2;
+            const spaceWidth = ctx.measureText(' ').width;
+            const starWidth = ctx.measureText('★').width;
 
-        ctx.font = 'bold 12px Inter, sans-serif';
-        for (let i = 0; i < text.length; i++) {
-            const angle = startAngle + i * anglePerChar;
-            ctx.save();
-            ctx.rotate(angle + Math.PI / 2);
-            ctx.translate(0, -radius + 20);
-            ctx.rotate(-Math.PI / 2);
-            ctx.fillText(text[i], 0, 0);
-            ctx.restore();
+            const topAngle = (ctx.measureText(name).width / textRadius) * kerningFactor;
+            const botAngle = place ? (ctx.measureText(place).width / textRadius) * kerningFactor : 0;
+
+            const starBlockAngle = (starWidth + spaceWidth * 2) / textRadius; // Space Star Space
+
+            // Required angle = Top + Bottom + 2 * StarBlock
+            const totalRequired = topAngle + botAngle + (starBlockAngle * 2);
+            return { topAngle, botAngle, totalRequired, starBlockAngle, fSize };
         }
 
+        let layout = calculateLayout(fontSize);
+        // If it doesn't fit, shrink font until it does (min 8px)
+        while (layout.totalRequired > Math.PI * 1.95 && fontSize > 8) {
+            fontSize -= 0.5;
+            layout = calculateLayout(fontSize);
+        }
+
+        // Draw Text with the decided font size
+        renderArcText(ctx, name, centerX, centerY, textRadius, color, `bold ${fontSize}px Inter`, false, layout.topAngle);
+        if (place) {
+            renderArcText(ctx, place, centerX, centerY, textRadius, color, `bold ${fontSize}px Inter`, true, layout.botAngle);
+        }
+
+        // Dynamic Stars - automatically centered in remaining gaps
+        // Gap Midpoint Right (centered at 0)
+        const rightStarAngle = (layout.topAngle - layout.botAngle) / 4;
+        // Gap Midpoint Left (centered at PI)
+        const leftStarAngle = Math.PI - (layout.topAngle - layout.botAngle) / 4;
+
+        ctx.font = `bold ${fontSize + 1}px Inter`; // Star slightly bigger for visibility
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        [rightStarAngle, leftStarAngle].forEach(angle => {
+            ctx.save();
+            ctx.translate(centerX + Math.cos(angle) * textRadius, centerY + Math.sin(angle) * textRadius);
+            ctx.fillText('★', 0, 0);
+            ctx.restore();
+        });
+    }
+
+    // New unified rendering function to ensure consistent spacing
+    function renderArcText(ctx, str, cx, cy, radius, color, font, isBottom, totalAngle) {
+        ctx.save();
+        ctx.font = font;
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const anglePerChar = totalAngle / Math.max(str.length, 1);
+        let startAngle;
+
+        if (!isBottom) {
+            // Top: centered north (-PI/2)
+            startAngle = -Math.PI / 2 - (totalAngle / 2) + (anglePerChar / 2);
+        } else {
+            // Bottom: centered south (PI/2), reversing for readable LTR
+            startAngle = Math.PI / 2 + (totalAngle / 2) - (anglePerChar / 2);
+        }
+
+        for (let i = 0; i < str.length; i++) {
+            const charAngle = isBottom ? (startAngle - i * anglePerChar) : (startAngle + i * anglePerChar);
+            ctx.save();
+            ctx.translate(cx + Math.cos(charAngle) * radius, cy + Math.sin(charAngle) * radius);
+            if (!isBottom) {
+                ctx.rotate(charAngle + Math.PI / 2);
+            } else {
+                ctx.rotate(charAngle - Math.PI / 2);
+            }
+            ctx.fillText(str[i], 0, 0);
+            ctx.restore();
+        }
         ctx.restore();
-
-        // Center star or symbol
-        ctx.font = 'bold 24px Inter, sans-serif';
-        ctx.fillText('★', centerX, centerY - 10);
-
-        // "AUTHORIZED" text at bottom
-        ctx.font = 'bold 10px Inter, sans-serif';
-        ctx.fillText('AUTHORIZED', centerX, centerY + 15);
-
-        // Date at very bottom
-        const date = new Date().getFullYear();
-        ctx.font = '10px Inter, sans-serif';
-        ctx.fillText(date.toString(), centerX, centerY + 35);
     }
 
-    function drawRectangleStamp(ctx, centerX, centerY, businessName, color) {
-        const width = 160;
-        const height = 80;
-        const x = centerX - width / 2;
-        const y = centerY - height / 2;
-        const cornerRadius = 5;
+    function drawRectangleStamp(ctx, centerX, centerY, name, place, color) {
+        const width = 180;
+        const height = 90;
+        const padding = 10;
+        const maxWidth = width - padding * 2;
 
-        // Outer rectangle
-        ctx.beginPath();
-        roundRect(ctx, x, y, width, height, cornerRadius);
-        ctx.stroke();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(centerX - width / 2, centerY - height / 2, width, height);
 
-        // Inner rectangle
-        ctx.beginPath();
-        roundRect(ctx, x + 4, y + 4, width - 8, height - 8, cornerRadius - 2);
-        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
-        // Business name
-        ctx.font = 'bold 14px Inter, sans-serif';
-        ctx.fillText(businessName.toUpperCase(), centerX, centerY - 12);
+        // 1. Fit Business Name
+        let nameFontSize = 18;
+        ctx.font = `bold ${nameFontSize}px Inter`;
+        while (ctx.measureText(name).width > maxWidth && nameFontSize > 10) {
+            nameFontSize -= 1;
+            ctx.font = `bold ${nameFontSize}px Inter`;
+        }
+        ctx.fillText(name, centerX, centerY - 15);
 
-        // Separator line
-        ctx.beginPath();
-        ctx.moveTo(x + 20, centerY + 2);
-        ctx.lineTo(x + width - 20, centerY + 2);
-        ctx.stroke();
+        // 2. Fit Place
+        let placeFontSize = 12;
+        ctx.font = `${placeFontSize}px Inter`;
 
-        // "AUTHORIZED SIGNATORY" text
-        ctx.font = 'bold 9px Inter, sans-serif';
-        ctx.fillText('AUTHORIZED SIGNATORY', centerX, centerY + 18);
+        if (ctx.measureText(place).width > maxWidth) {
+            // Try multi-line if too long
+            const words = place.split(' ');
+            const mid = Math.floor(words.length / 2);
+            const line1 = words.slice(0, mid).join(' ');
+            const line2 = words.slice(mid).join(' ');
+
+            ctx.fillText(line1, centerX, centerY + 10);
+            ctx.fillText(line2, centerX, centerY + 25);
+        } else {
+            ctx.fillText(place, centerX, centerY + 15);
+        }
     }
 
-    function roundRect(ctx, x, y, width, height, radius) {
-        ctx.moveTo(x + radius, y);
-        ctx.lineTo(x + width - radius, y);
-        ctx.arcTo(x + width, y, x + width, y + radius, radius);
-        ctx.lineTo(x + width, y + height - radius);
-        ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
-        ctx.lineTo(x + radius, y + height);
-        ctx.arcTo(x, y + height, x, y + height - radius, radius);
-        ctx.lineTo(x, y + radius);
-        ctx.arcTo(x, y, x + radius, y, radius);
-    }
-}
-
-// Debounce function
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
+    function debounce(func, wait) {
+        let timeout;
+        return function (...args) {
             clearTimeout(timeout);
-            func(...args);
+            timeout = setTimeout(() => func(...args), wait);
         };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
+    }
 }

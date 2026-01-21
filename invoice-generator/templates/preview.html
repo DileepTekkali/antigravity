@@ -10,8 +10,7 @@
             <p class="page-subtitle">{{ bill.bill_number }}</p>
         </div>
         <a href="{{ url_for('create_bill') }}" class="btn btn-outline">
-            <span class="btn-icon">➕</span>
-            New Bill
+            + New Bill
         </a>
     </div>
 </div>
@@ -20,134 +19,168 @@
 <div class="bill-preview-wrapper">
     <div class="bill-preview" id="billPreview">
         <!-- Header -->
-        <div class="bill-header">
+        <div class="bill-header"
+            style="display: flex; gap: 30px; margin-bottom: 40px; padding-bottom: 30px; border-bottom: 2px solid #eee;">
             {% if template.logo_path %}
-            <img src="{{ url_for('uploaded_file', filename=template.logo_path) }}" alt="Logo" class="bill-logo">
+            <div style="width: 100px; height: 100px; display: flex; align-items: center; justify-content: center;">
+                <img src="{{ url_for('uploaded_file', filename=template.logo_path) }}" alt="Logo"
+                    style="max-width: 100%; max-height: 100%; object-fit: contain;">
+            </div>
             {% endif %}
-            <div class="bill-business-info">
-                <h1 class="business-name">{{ template.business_name }}</h1>
-                <p class="business-address">{{ template.business_address }}</p>
-                <p class="business-contact">📞 {{ template.mobile }}</p>
-                {% if template.gst_number and bill.gst_enabled %}
-                <p class="business-gst">GSTIN: {{ template.gst_number }}</p>
-                {% endif %}
+            <div style="flex: 1;">
+                <h1 style="font-size: 28px; font-weight: 700; color: #1e3a8a; margin-bottom: 8px;">{{
+                    template.business_name }}</h1>
+                <p style="color: #475569; font-size: 14px; margin-bottom: 4px; max-width: 300px;">{{
+                    template.business_address }}</p>
+                <div style="font-size: 14px; margin-top: 8px;">
+                    <p><strong>Owner:</strong> {{ template.owner_name }}</p>
+                    <p><strong>Mobile:</strong> {{ template.mobile }}</p>
+                    {% if template.gst_number and bill.gst_enabled %}
+                    <p style="margin-top: 4px;"><strong>GSTIN:</strong> {{ template.gst_number }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 24px; font-weight: 700; color: #94a3b8; letter-spacing: 2px;">INVOICE</div>
+                <div style="margin-top: 10px;">
+                    <p style="font-size: 16px; font-weight: 600;">#{{ bill.bill_number }}</p>
+                    <p style="color: #64748b; font-size: 14px; margin-top: 4px;">Date: {{ bill.bill_date if
+                        bill.bill_date else bill.created_at[:10] }}</p>
+                </div>
             </div>
         </div>
 
-        <div class="bill-title-bar">
-            <span class="bill-title">TAX INVOICE</span>
-            <span class="bill-number-display">{{ bill.bill_number }}</span>
-        </div>
-
-        <!-- Bill Details -->
-        <div class="bill-details">
-            <div class="bill-to">
-                <h3>Bill To:</h3>
-                <p class="customer-name">{{ bill.customer_name }}</p>
-                {% if bill.customer_mobile %}
-                <p>📞 {{ bill.customer_mobile }}</p>
-                {% endif %}
-                {% if bill.customer_address %}
-                <p>{{ bill.customer_address }}</p>
-                {% endif %}
-            </div>
-            <div class="bill-meta-info">
-                <p><strong>Date:</strong> {{ bill.created_at[:10] }}</p>
-            </div>
+        <!-- Bill To -->
+        <div style="margin-bottom: 40px;">
+            <p
+                style="color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 10px;">
+                Bill To</p>
+            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">{{ bill.customer_name }}</h3>
+            {% if bill.customer_mobile %}
+            <p style="color: #475569; font-size: 14px; margin-bottom: 4px;">{{ bill.customer_mobile }}</p>
+            {% endif %}
+            {% if bill.customer_address %}
+            <p style="color: #475569; font-size: 14px; max-width: 300px;">{{ bill.customer_address }}</p>
+            {% endif %}
         </div>
 
         <!-- Items Table -->
-        <table class="bill-items-table">
-            <thead>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
+            <thead style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
                 <tr>
-                    <th class="col-sno">#</th>
-                    <th class="col-name">Item</th>
-                    <th class="col-qty">Qty</th>
-                    <th class="col-rate">Rate</th>
-                    <th class="col-amount">Amount</th>
+                    <th
+                        style="text-align: left; padding: 12px; color: #64748b; font-size: 12px; text-transform: uppercase;">
+                        #</th>
+                    <th
+                        style="text-align: left; padding: 12px; color: #64748b; font-size: 12px; text-transform: uppercase;">
+                        Item</th>
+                    <th
+                        style="text-align: right; padding: 12px; color: #64748b; font-size: 12px; text-transform: uppercase;">
+                        Qty</th>
+                    <th
+                        style="text-align: right; padding: 12px; color: #64748b; font-size: 12px; text-transform: uppercase;">
+                        Rate</th>
+                    <th
+                        style="text-align: right; padding: 12px; color: #64748b; font-size: 12px; text-transform: uppercase;">
+                        Amount</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in items %}
-                <tr>
-                    <td>{{ loop.index }}</td>
-                    <td>{{ item.name }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>₹{{ "%.2f"|format(item.rate) }}</td>
-                    <td>₹{{ "%.2f"|format(item.amount) }}</td>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 12px; color: #64748b;">{{ loop.index }}</td>
+                    <td style="padding: 12px; font-weight: 500;">{{ item.name }}</td>
+                    <td style="padding: 12px; text-align: right; color: #475569;">{{ item.quantity }}</td>
+                    <td style="padding: 12px; text-align: right; color: #475569;">₹{{ "%.2f"|format(item.rate) }}</td>
+                    <td style="padding: 12px; text-align: right; font-weight: 600;">₹{{ "%.2f"|format(item.amount) }}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
 
         <!-- Totals -->
-        <div class="bill-totals">
-            <div class="totals-table">
-                <div class="total-row">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 60px;">
+            <div style="min-width: 250px;">
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; color: #475569;">
                     <span>Subtotal</span>
-                    <span>₹{{ "%.2f"|format(bill.subtotal) }}</span>
+                    <span style="font-weight: 600;">₹{{ "%.2f"|format(bill.subtotal) }}</span>
                 </div>
                 {% if bill.gst_enabled %}
-                <div class="total-row">
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; color: #475569;">
                     <span>GST ({{ bill.gst_percentage }}%)</span>
                     <span>₹{{ "%.2f"|format(bill.gst_amount) }}</span>
                 </div>
                 {% endif %}
-                <div class="total-row grand-total">
-                    <span>Grand Total</span>
+                <div
+                    style="display: flex; justify-content: space-between; padding: 12px 0; border-top: 2px solid #e2e8f0; margin-top: 8px; font-size: 18px; color: #1e3a8a; font-weight: 700;">
+                    <span>Total</span>
                     <span>₹{{ "%.2f"|format(bill.total) }}</span>
                 </div>
             </div>
         </div>
 
-        <!-- Footer -->
-        <div class="bill-footer">
-            <div class="signature-section">
-                {% if template.signature_path %}
-                <img src="{{ url_for('uploaded_file', filename=template.signature_path) }}" alt="Signature"
-                    class="signature-image">
-                {% endif %}
-                <p class="signature-line">Authorized Signature</p>
-                <p class="owner-name">{{ template.owner_name }}</p>
+        <!-- Footer / Signature -->
+        <div style="position: relative; margin-top: 60px; height: 120px; display: flex; justify-content: flex-end;">
+            <div style="width: 200px; text-align: center; position: relative;">
+
+                <!-- Signature Container -->
+                <div
+                    style="position: relative; height: 100px; width: 100%; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 8px;">
+
+                    {% set is_circle = template.stamp_type == 'circle' %}
+
+                    <!-- Stamp Image -->
+                    <!-- Circle: Bottom layer (z-1). Centered. -->
+                    <!-- Rectangle: Bottom spatial position. -->
+                    {% if template.stamp_data or template.stamp_upload_path %}
+                    <img src="{{ template.stamp_data if template.stamp_data else url_for('uploaded_file', filename=template.stamp_upload_path) }}"
+                        alt="Stamp"
+                        style="max-height: 90px; max-width: 140px; position: absolute; 
+                                bottom: {{ '5px' if is_circle else '0px' }}; 
+                                right: {{ '20px' if is_circle else '10px' }}; 
+                                z-index: 1; 
+                                opacity: 0.9; 
+                                {{ 'transform: rotate(-5deg); left: 50%; transform: translateX(-50%) rotate(-5deg); right: auto;' if is_circle else 'transform: rotate(0deg);' }}">
+                    {% endif %}
+
+                    <!-- Signature Image -->
+                    <!-- Circle: Top layer (z-10). Centered on stamp. -->
+                    <!-- Rectangle: "Above" stamp (spatially higher), touching it. -->
+                    {% if template.signature_path %}
+                    <img src="{{ url_for('uploaded_file', filename=template.signature_path) }}" alt="Signature" style="max-height: 60px; max-width: 140px; position: absolute; 
+                                bottom: {{ '15px' if is_circle else '90px' }}; 
+                                z-index: 10; 
+                                left: 50%; 
+                                transform: translateX(-50%);">
+                    {% endif %}
+                </div>
+
+                <div style="border-top: 1px solid #94a3b8; padding-top: 8px;">
+                    <p style="font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase;">Authorized
+                        Signature</p>
+                </div>
             </div>
-            {% if template.stamp_data %}
-            <div class="stamp-section">
-                <img src="{{ template.stamp_data }}" alt="Stamp" class="stamp-image">
-            </div>
-            {% endif %}
         </div>
 
-        <div class="bill-thank-you">
+        <div style="margin-top: 40px; text-align: center; color: #94a3b8; font-size: 12px;">
             <p>Thank you for your business!</p>
         </div>
     </div>
 </div>
 
 <!-- Export Actions -->
-<div class="export-actions">
-    <button class="btn btn-primary btn-export" onclick="downloadPDF()">
-        <span class="btn-icon">📄</span>
-        Download PDF
-    </button>
-    <button class="btn btn-secondary btn-export" onclick="downloadJPEG()">
-        <span class="btn-icon">🖼️</span>
-        Download JPEG
-    </button>
-    <button class="btn btn-secondary btn-export" onclick="printBill()">
-        <span class="btn-icon">🖨️</span>
-        Print
-    </button>
-    <button class="btn btn-secondary btn-export" onclick="shareBill()">
-        <span class="btn-icon">📤</span>
-        Share
-    </button>
+<div class="export-actions" style="display: flex; gap: 16px; flex-wrap: wrap;">
+    <button class="btn btn-primary" onclick="downloadPDF()">Download PDF</button>
+    <button class="btn btn-secondary" onclick="downloadJPEG()">Download JPEG</button>
+    <button class="btn btn-secondary" onclick="printBill()">Print</button>
+    <button class="btn btn-secondary" onclick="shareBill()">Share</button>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/export.js') }}"></script>
 <script>
-    // Set bill number for export filename
     window.billNumber = "{{ bill.bill_number }}";
 </script>
 {% endblock %}
