@@ -3,25 +3,159 @@
 {% block title %}Bill History - Invoice Generator{% endblock %}
 
 {% block content %}
+<style>
+    .history-controls {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
+
+    .search-box {
+        flex: 1;
+        min-width: 300px;
+        position: relative;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 16px 12px 44px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 14px;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 18px;
+    }
+
+    .sort-dropdown {
+        padding: 12px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+        cursor: pointer;
+        min-width: 200px;
+    }
+
+    .history-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+    }
+
+    .history-card {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.2s;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .history-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        border-color: var(--brand-primary);
+    }
+
+    .history-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .bill-number-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .bill-date {
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+
+    .customer-name {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .customer-contact {
+        color: var(--text-secondary);
+        font-size: 14px;
+        margin: 4px 0 0 0;
+    }
+
+    .history-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 12px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .total-amount {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--brand-primary);
+    }
+
+    .view-arrow {
+        font-size: 20px;
+        color: var(--brand-primary);
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+</style>
+
 <div class="page-header">
-    <h1 class="page-title">Bill History</h1>
+    <h1 class="page-title">📚 Bill History</h1>
     <p class="page-subtitle">All your generated invoices</p>
 </div>
 
-<!-- Search Bar -->
-<div class="search-section">
+{% if bills %}
+<!-- Search and Sort Controls -->
+<div class="history-controls">
     <div class="search-box">
         <span class="search-icon">🔍</span>
         <input type="text" id="searchInput" class="search-input"
-            placeholder="Search by customer name or bill number...">
+            placeholder="Search by customer name, bill number, or amount...">
     </div>
+    <select id="sortDropdown" class="sort-dropdown">
+        <option value="date-desc">📅 Newest First</option>
+        <option value="date-asc">📅 Oldest First</option>
+        <option value="amount-desc">💰 Highest Amount</option>
+        <option value="amount-asc">💰 Lowest Amount</option>
+        <option value="customer-asc">👤 Customer A-Z</option>
+        <option value="customer-desc">👤 Customer Z-A</option>
+    </select>
 </div>
 
-{% if bills %}
-<div class="history-list" id="historyList">
+<div class="history-grid" id="historyList">
     {% for bill in bills %}
     <a href="{{ url_for('preview_bill', bill_id=bill.id) }}" class="history-card"
-        data-customer="{{ bill.customer_name|lower }}" data-bill="{{ bill.bill_number|lower }}">
+        data-customer="{{ bill.customer_name|lower }}" data-bill="{{ bill.bill_number|lower }}"
+        data-amount="{{ bill.total }}" data-date="{{ bill.created_at }}">
         <div class="history-card-header">
             <span class="bill-number-badge">{{ bill.bill_number }}</span>
             <span class="bill-date">{{ bill.created_at[:10] }}</span>
@@ -39,6 +173,12 @@
     </a>
     {% endfor %}
 </div>
+
+<div id="noResults" class="no-results" style="display: none;">
+    <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+    <p>No bills found matching your search</p>
+</div>
+
 {% else %}
 <div class="empty-state-container">
     <div class="empty-state-icon">📋</div>
@@ -54,21 +194,74 @@
 
 {% block scripts %}
 <script>
+    const searchInput = document.getElementById('searchInput');
+    const sortDropdown = document.getElementById('sortDropdown');
+    const historyList = document.getElementById('historyList');
+    const noResults = document.getElementById('noResults');
+    let cards = Array.from(document.querySelectorAll('.history-card'));
+
     // Search functionality
-    document.getElementById('searchInput').addEventListener('input', function (e) {
-        const query = e.target.value.toLowerCase();
-        const cards = document.querySelectorAll('.history-card');
+    function performSearch() {
+        const query = searchInput.value.toLowerCase();
+        let visibleCount = 0;
 
         cards.forEach(card => {
             const customer = card.dataset.customer;
             const billNum = card.dataset.bill;
+            const amount = card.dataset.amount;
 
-            if (customer.includes(query) || billNum.includes(query)) {
+            if (customer.includes(query) || billNum.includes(query) || amount.includes(query)) {
                 card.style.display = 'flex';
+                visibleCount++;
             } else {
                 card.style.display = 'none';
             }
         });
-    });
+
+        // Show/hide no results message
+        if (visibleCount === 0 && query) {
+            noResults.style.display = 'block';
+            historyList.style.display = 'none';
+        } else {
+            noResults.style.display = 'none';
+            historyList.style.display = 'grid';
+        }
+    }
+
+    // Sort functionality
+    function performSort() {
+        const sortBy = sortDropdown.value;
+
+        cards.sort((a, b) => {
+            switch (sortBy) {
+                case 'date-desc':
+                    return new Date(b.dataset.date) - new Date(a.dataset.date);
+                case 'date-asc':
+                    return new Date(a.dataset.date) - new Date(b.dataset.date);
+                case 'amount-desc':
+                    return parseFloat(b.dataset.amount) - parseFloat(a.dataset.amount);
+                case 'amount-asc':
+                    return parseFloat(a.dataset.amount) - parseFloat(b.dataset.amount);
+                case 'customer-asc':
+                    return a.dataset.customer.localeCompare(b.dataset.customer);
+                case 'customer-desc':
+                    return b.dataset.customer.localeCompare(a.dataset.customer);
+                default:
+                    return 0;
+            }
+        });
+
+        // Re-append cards in sorted order
+        cards.forEach(card => historyList.appendChild(card));
+    }
+
+    // Event listeners
+    if (searchInput) {
+        searchInput.addEventListener('input', performSearch);
+    }
+
+    if (sortDropdown) {
+        sortDropdown.addEventListener('change', performSort);
+    }
 </script>
 {% endblock %}

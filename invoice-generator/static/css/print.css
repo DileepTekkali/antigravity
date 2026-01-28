@@ -1,0 +1,213 @@
+/**
+ * A4 Pagination and Print Styles for Invoice
+ * Ensures proper page breaks and signature/stamp placement
+ */
+
+/* A4 Page Dimensions */
+@media print {
+    @page {
+        size: A4;
+        margin: 0;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Hide non-printable elements */
+    .sidebar,
+    .mobile-nav,
+    .export-actions,
+    .page-header,
+    .btn,
+    .pagination-warning {
+        display: none !important;
+    }
+
+    .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+
+    /* Remove wrapper styling */
+    .bill-preview-wrapper {
+        background: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Invoice page - full A4 with 7mm top/bottom margin */
+    .bill-preview,
+    .invoice-page {
+        width: 210mm !important;
+        max-width: 210mm !important;
+        min-height: 297mm !important;
+        padding: 7mm 15mm !important;
+        /* 7mm top/bottom, 15mm left/right */
+        margin: 0 !important;
+        box-shadow: none !important;
+        background: white !important;
+        display: block !important;
+    }
+
+    /* Page break controls */
+    .page-break-before {
+        page-break-before: always !important;
+        break-before: page !important;
+        padding-top: 7mm !important;
+        /* 7mm top margin for continuation pages */
+    }
+
+    .page-break-after {
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .page-break-inside-avoid {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Ensure signature section never breaks */
+    .signature-section {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-before: auto;
+        break-before: auto;
+    }
+
+    /* Keep totals and signature together */
+    .totals-and-signature {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        margin-bottom: 7mm !important;
+        /* 7mm bottom margin */
+    }
+
+    /* Invoice page container */
+    .invoice-page {
+        position: relative;
+        min-height: 277mm;
+        /* A4 height - margins */
+    }
+
+    /* Header section - 50mm */
+    .bill-header-section {
+        height: auto !important;
+        max-height: 50mm !important;
+        page-break-inside: avoid !important;
+        overflow: hidden !important;
+    }
+
+    /* Customer info - 25mm */
+    .customer-section {
+        height: auto !important;
+        max-height: 25mm !important;
+        page-break-inside: avoid !important;
+        overflow: hidden !important;
+    }
+
+    /* Items table - Remaining space (approx 160mm+) */
+    .items-section {
+        height: auto;
+        min-height: 100mm;
+        /* Ensure items take up available space */
+    }
+
+    /* Tax/Total - 20mm */
+    .totals-section {
+        height: auto !important;
+        max-height: 20mm !important;
+        overflow: hidden !important;
+    }
+
+    /* Signature - 25mm */
+    .signature-section {
+        height: auto !important;
+        max-height: 25mm !important;
+        overflow: hidden !important;
+    }
+}
+
+/* Screen view - percentage-based layout */
+.invoice-page {
+    position: relative;
+    background: white;
+    width: 210mm;
+    min-height: 297mm;
+    padding: 20mm;
+    margin: 0 auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Section height allocations */
+.bill-header-section {
+    margin-bottom: 20px;
+}
+
+.customer-section {
+    margin-bottom: 20px;
+}
+
+.items-section {
+    flex: 1;
+    margin-bottom: 20px;
+}
+
+.totals-section {
+    margin-bottom: 20px;
+}
+
+.signature-section {
+    margin-top: auto;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Ensure signature and totals stay together */
+.totals-and-signature {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Multi-page support */
+.invoice-continuation {
+    margin-top: 20px;
+}
+
+.continuation-header {
+    font-size: 12px;
+    color: #64748b;
+    text-align: right;
+    margin-bottom: 10px;
+    font-style: italic;
+}
+
+/* Items table pagination */
+.items-table-page {
+    page-break-inside: auto;
+}
+
+.items-table-row {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Prevent orphaned rows */
+tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Footer on last page only */
+.invoice-footer {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}

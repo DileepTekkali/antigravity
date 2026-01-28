@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
+
 <body>
     <div class="app-container">
         <!-- Mobile Navigation -->
@@ -37,17 +39,40 @@
                     <span class="nav-icon">🏠</span>
                     <span>Dashboard</span>
                 </a>
-                <a href="{{ url_for('template') }}" class="nav-link {% if request.endpoint == 'template' %}active{% endif %}">
+                <a href="{{ url_for('template') }}"
+                    class="nav-link {% if request.endpoint == 'template' %}active{% endif %}">
                     <span class="nav-icon">📋</span>
                     <span>Template</span>
                 </a>
-                <a href="{{ url_for('create_bill') }}" class="nav-link {% if request.endpoint == 'create_bill' %}active{% endif %}">
+                <a href="{{ url_for('create_bill') }}"
+                    class="nav-link {% if request.endpoint == 'create_bill' %}active{% endif %}">
                     <span class="nav-icon">➕</span>
                     <span>Create Bill</span>
                 </a>
-                <a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
+                <a href="{{ url_for('history') }}"
+                    class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
                     <span class="nav-icon">📚</span>
                     <span>History</span>
+                </a>
+
+                {% if session.get('is_admin') %}
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 16px 0;">
+                <a href="{{ url_for('admin_dashboard') }}"
+                    class="nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}">
+                    <span class="nav-icon">👑</span>
+                    <span>Admin Panel</span>
+                </a>
+                <a href="{{ url_for('admin_profile') }}"
+                    class="nav-link {% if request.endpoint == 'admin_profile' %}active{% endif %}">
+                    <span class="nav-icon">👤</span>
+                    <span>Admin Profile</span>
+                </a>
+                {% endif %}
+
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 16px 0;">
+                <a href="{{ url_for('logout') }}" class="nav-link" style="color: var(--error);">
+                    <span class="nav-icon">🚪</span>
+                    <span>Logout</span>
                 </a>
             </nav>
         </aside>
@@ -61,4 +86,5 @@
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
+
 </html>

@@ -1,6 +1,6 @@
 // Export Functions - PDF, JPEG, Print, Share
 
-// Download as PDF
+// Download as PDF with proper A4 sizing
 async function downloadPDF() {
     const { jsPDF } = window.jspdf;
     const element = document.getElementById('billPreview');
@@ -13,31 +13,80 @@ async function downloadPDF() {
     showToast('Generating PDF...', 'info');
 
     try {
+        // Capture only the invoice content, not the wrapper
         const canvas = await html2canvas(element, {
             scale: 2,
             useCORS: true,
             allowTaint: true,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            windowWidth: 794,  // A4 width in pixels at 96 DPI (210mm)
+            windowHeight: 1123, // A4 height in pixels at 96 DPI (297mm)
+            x: 0,
+            y: 0,
+            scrollY: -window.scrollY,
+            scrollX: -window.scrollX
         });
 
-        const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
             format: 'a4'
         });
 
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const pdfWidth = 210; // A4 width in mm
+        const pdfHeight = 297; // A4 height in mm
+        const margin = 0; // No margins for full bleed
 
+        // Calculate dimensions to fit A4 perfectly
         const imgWidth = canvas.width;
         const imgHeight = canvas.height;
 
-        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-        const imgX = (pdfWidth - imgWidth * ratio) / 2;
-        const imgY = 10;
+        // Convert pixels to mm (assuming 96 DPI)
+        const imgWidthMM = (imgWidth * 25.4) / (96 * 2); // scale is 2
+        const imgHeightMM = (imgHeight * 25.4) / (96 * 2);
 
-        pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+        // Check if content fits on one page
+        if (imgHeightMM <= pdfHeight) {
+            // Single page - fit to width
+            const ratio = pdfWidth / imgWidthMM;
+            const scaledHeight = imgHeightMM * ratio;
+
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG',
+                margin, margin, pdfWidth, scaledHeight);
+        } else {
+            // Multi-page - split content
+            const pageHeight = pdfHeight;
+            const pageHeightPx = (pageHeight * 96 * 2) / 25.4; // Convert mm to pixels
+
+            let yPosition = 0;
+            let pageNumber = 0;
+
+            while (yPosition < imgHeight) {
+                if (pageNumber > 0) {
+                    pdf.addPage();
+                }
+
+                // Create a canvas for this page
+                const pageCanvas = document.createElement('canvas');
+                pageCanvas.width = imgWidth;
+                pageCanvas.height = Math.min(pageHeightPx, imgHeight - yPosition);
+
+                const ctx = pageCanvas.getContext('2d');
+                ctx.drawImage(canvas,
+                    0, yPosition, imgWidth, pageCanvas.height,
+                    0, 0, imgWidth, pageCanvas.height);
+
+                const pageImgData = pageCanvas.toDataURL('image/png');
+                const ratio = pdfWidth / imgWidthMM;
+                const pageHeightMM = (pageCanvas.height * 25.4) / (96 * 2);
+
+                pdf.addImage(pageImgData, 'PNG',
+                    margin, margin, pdfWidth, pageHeightMM * ratio);
+
+                yPosition += pageHeightPx;
+                pageNumber++;
+            }
+        }
 
         const fileName = window.billNumber ? `${window.billNumber}.pdf` : 'invoice.pdf';
         pdf.save(fileName);
@@ -49,7 +98,7 @@ async function downloadPDF() {
     }
 }
 
-// Download as JPEG
+// Download as JPEG with proper A4 sizing
 async function downloadJPEG() {
     const element = document.getElementById('billPreview');
 
@@ -61,19 +110,57 @@ async function downloadJPEG() {
     showToast('Generating image...', 'info');
 
     try {
+        // Capture with same settings as PDF for consistency
         const canvas = await html2canvas(element, {
             scale: 2,
             useCORS: true,
             allowTaint: true,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            windowWidth: 794,  // A4 width in pixels
+            windowHeight: 1123, // A4 height in pixels
+            x: 0,
+            y: 0,
+            scrollY: -window.scrollY,
+            scrollX: -window.scrollX
         });
 
-        const link = document.createElement('a');
-        link.download = window.billNumber ? `${window.billNumber}.jpg` : 'invoice.jpg';
-        link.href = canvas.toDataURL('image/jpeg', 0.9);
-        link.click();
+        // For multi-page invoices, create separate images
+        const a4HeightPx = 1123 * 2; // Account for scale
 
-        showToast('Image downloaded successfully!', 'success');
+        if (canvas.height <= a4HeightPx) {
+            // Single page
+            const link = document.createElement('a');
+            link.download = window.billNumber ? `${window.billNumber}.jpg` : 'invoice.jpg';
+            link.href = canvas.toDataURL('image/jpeg', 0.95);
+            link.click();
+            showToast('Image downloaded successfully!', 'success');
+        } else {
+            // Multi-page - create separate images
+            const pageCount = Math.ceil(canvas.height / a4HeightPx);
+
+            for (let i = 0; i < pageCount; i++) {
+                const pageCanvas = document.createElement('canvas');
+                pageCanvas.width = canvas.width;
+                pageCanvas.height = Math.min(a4HeightPx, canvas.height - (i * a4HeightPx));
+
+                const ctx = pageCanvas.getContext('2d');
+                ctx.drawImage(canvas,
+                    0, i * a4HeightPx, canvas.width, pageCanvas.height,
+                    0, 0, canvas.width, pageCanvas.height);
+
+                const link = document.createElement('a');
+                const fileName = window.billNumber ?
+                    `${window.billNumber}_page${i + 1}.jpg` :
+                    `invoice_page${i + 1}.jpg`;
+                link.download = fileName;
+                link.href = pageCanvas.toDataURL('image/jpeg', 0.95);
+                link.click();
+
+                // Small delay between downloads
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            showToast(`${pageCount} images downloaded successfully!`, 'success');
+        }
     } catch (error) {
         console.error('JPEG generation error:', error);
         showToast('Failed to generate image', 'error');

@@ -3,88 +3,290 @@
 {% block title %}Dashboard - Invoice Generator{% endblock %}
 
 {% block content %}
+<style>
+    .dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .stat-card-widget {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stat-card-widget:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+        border-color: var(--brand-primary);
+    }
+
+    .widget-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+    }
+
+    .icon-blue {
+        background: #e0f2fe;
+        color: #0284c7;
+    }
+
+    .icon-green {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+
+    .icon-purple {
+        background: #f3e8ff;
+        color: #9333ea;
+    }
+
+    .widget-content {
+        flex: 1;
+    }
+
+    .widget-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.2;
+    }
+
+    .widget-label {
+        color: var(--text-secondary);
+        font-size: 14px;
+        margin-top: 4px;
+    }
+
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-bottom: 40px;
+    }
+
+    .action-card {
+        background: white;
+        /* Fallback */
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 32px;
+        text-align: center;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .action-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 6px;
+        background: var(--brand-gradient);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-card:hover::before {
+        opacity: 1;
+    }
+
+    .action-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+        display: inline-block;
+        padding: 20px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+    }
+
+    .action-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+    }
+
+    .action-desc {
+        color: var(--text-secondary);
+        margin-bottom: 24px;
+        line-height: 1.6;
+        min-height: 48px;
+    }
+
+    .recent-section {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .bill-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid var(--border-color);
+        transition: background 0.2s;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .bill-row:last-child {
+        border-bottom: none;
+    }
+
+    .bill-row:hover {
+        background: var(--bg-primary);
+    }
+
+    .bill-info-main {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .bill-avatar {
+        width: 40px;
+        height: 40px;
+        background: var(--brand-primary);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+    }
+</style>
+
 <div class="page-header">
-    <h1 class="page-title">Dashboard</h1>
-    <p class="page-subtitle">Manage your invoices on the go</p>
+    <div>
+        <h1 class="page-title">Welcome Back, {{ template.owner_name if template else 'User' }}! 👋</h1>
+        <p class="page-subtitle">Here's what's happening with your business today.</p>
+    </div>
+    <div style="text-align: right;">
+        <span style="font-size: 14px; color: var(--text-secondary);">Today is</span>
+        <div style="font-size: 18px; font-weight: 600; color: var(--text-primary);">
+            <script>document.write(new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }))</script>
+        </div>
+    </div>
 </div>
 
-<div class="dashboard-grid">
-    <!-- Quick Actions -->
-    <div class="card quick-actions">
-        <h2 class="card-title">Quick Actions</h2>
-        <div class="action-buttons">
-            {% if template %}
-            <a href="{{ url_for('create_bill') }}" class="btn btn-primary btn-large">
-                <span class="btn-icon">➕</span>
-                <span>Create New Bill</span>
-            </a>
-            {% else %}
-            <a href="{{ url_for('template') }}" class="btn btn-primary btn-large">
-                <span class="btn-icon">📋</span>
-                <span>Setup Business Template</span>
-            </a>
-            {% endif %}
-            <a href="{{ url_for('history') }}" class="btn btn-secondary btn-large">
-                <span class="btn-icon">📚</span>
-                <span>View History</span>
-            </a>
+<!-- Quick Stats -->
+<div class="dashboard-stats">
+    <div class="stat-card-widget">
+        <div class="widget-icon icon-blue">📄</div>
+        <div class="widget-content">
+            <div class="widget-value">{{ recent_bills|length }}</div>
+            <div class="widget-label">Recent Bills Created</div>
         </div>
     </div>
+    {% if template %}
+    <div class="stat-card-widget">
+        <div class="widget-icon icon-green">🏢</div>
+        <div class="widget-content">
+            <div class="widget-value">Ready</div>
+            <div class="widget-label">Business Template</div>
+        </div>
+    </div>
+    {% else %}
+    <div class="stat-card-widget">
+        <div class="widget-icon icon-purple">⚙️</div>
+        <div class="widget-content">
+            <div class="widget-value">Pending</div>
+            <div class="widget-label">Setup Required</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
 
-    <!-- Template Status -->
-    <div class="card template-status">
-        <h2 class="card-title">Business Template</h2>
+<!-- Primary Actions -->
+<div class="action-grid">
+    <div class="action-card">
+        <div class="action-icon">➕</div>
+        <h3 class="action-title">Create New Bill</h3>
+        <p class="action-desc">Generate a professional invoice for your customers in seconds.</p>
         {% if template %}
-        <div class="status-badge success">
-            <span class="badge-icon">✓</span>
-            <span>Template Configured</span>
-        </div>
-        <div class="template-info">
-            <p><strong>{{ template.business_name }}</strong></p>
-            <p>{{ template.owner_name }}</p>
-            <p>{{ template.mobile }}</p>
-            {% if template.gst_number %}
-            <p class="gst-badge">GST: {{ template.gst_number }}</p>
-            {% endif %}
-        </div>
-        <a href="{{ url_for('template') }}" class="btn btn-outline">Edit Template</a>
+        <a href="{{ url_for('create_bill') }}" class="btn btn-primary btn-large btn-full">Start Billing →</a>
         {% else %}
-        <div class="status-badge warning">
-            <span class="badge-icon">⚠</span>
-            <span>Template Not Set</span>
-        </div>
-        <p class="status-message">Setup your business template to start creating bills.</p>
-        <a href="{{ url_for('template') }}" class="btn btn-primary">Setup Now</a>
+        <a href="{{ url_for('template') }}" class="btn btn-primary btn-large btn-full">Setup Template First</a>
         {% endif %}
     </div>
 
-    <!-- Recent Bills -->
-    <div class="card recent-bills">
-        <h2 class="card-title">Recent Bills</h2>
-        {% if recent_bills %}
-        <ul class="bill-list">
-            {% for bill in recent_bills %}
-            <li class="bill-item">
-                <a href="{{ url_for('preview_bill', bill_id=bill.id) }}" class="bill-link">
-                    <div class="bill-info">
-                        <span class="bill-number">{{ bill.bill_number }}</span>
-                        <span class="bill-customer">{{ bill.customer_name }}</span>
-                    </div>
-                    <div class="bill-meta">
-                        <span class="bill-amount">₹{{ "%.2f"|format(bill.total) }}</span>
-                        <span class="bill-date">{{ bill.created_at[:10] }}</span>
-                    </div>
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
-        <a href="{{ url_for('history') }}" class="btn btn-outline">View All</a>
-        {% else %}
-        <p class="empty-state">No bills created yet.</p>
-        {% if template %}
-        <a href="{{ url_for('create_bill') }}" class="btn btn-primary">Create First Bill</a>
-        {% endif %}
-        {% endif %}
+    <div class="action-card">
+        <div class="action-icon">📚</div>
+        <h3 class="action-title">View History</h3>
+        <p class="action-desc">Access all your past invoices, search, filter, and manage records.</p>
+        <a href="{{ url_for('history') }}" class="btn btn-secondary btn-large btn-full">Go to History</a>
     </div>
+
+    <div class="action-card">
+        <div class="action-icon">📋</div>
+        <h3 class="action-title">Manage Template</h3>
+        <p class="action-desc">Update your business details, logo, signature, and GST information.</p>
+        <a href="{{ url_for('template') }}" class="btn btn-outline btn-large btn-full">Edit Details</a>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="recent-section">
+    <div class="section-header">
+        <h2 style="font-size: 20px; font-weight: 700; margin: 0;">🕒 Recent Activity</h2>
+        <a href="{{ url_for('history') }}"
+            style="color: var(--brand-primary); text-decoration: none; font-weight: 500;">View All</a>
+    </div>
+
+    {% if recent_bills %}
+    <div class="bill-list">
+        {% for bill in recent_bills %}
+        <a href="{{ url_for('preview_bill', bill_id=bill.id) }}" class="bill-row">
+            <div class="bill-info-main">
+                <div class="bill-avatar">{{ bill.customer_name[0]|upper }}</div>
+                <div>
+                    <div style="font-weight: 600; color: var(--text-primary);">{{ bill.customer_name }}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">{{ bill.bill_number }}</div>
+                </div>
+            </div>
+            <div class="bill-meta" style="text-align: right;">
+                <div style="font-weight: 700; color: var(--brand-primary);">₹{{ "%.2f"|format(bill.total) }}</div>
+                <div style="font-size: 12px; color: var(--text-muted);">{{ bill.created_at[:10] }}</div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+        <p>No recent activity generated yet.</p>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

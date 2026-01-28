@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Invoice Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            width: 100%;
+            max-width: 520px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .auth-logo {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .auth-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .auth-subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+
+        .flash {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .flash.success {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .flash.error {
+            background: var(--error-bg);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        .auth-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .auth-link a {
+            color: var(--brand-primary);
+            font-weight: 500;
+        }
+
+        .auth-link a:hover {
+            text-decoration: underline;
+        }
+
+        .gst-verify-container {
+            position: relative;
+        }
+
+        .gst-status {
+            margin-top: 8px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .gst-status.valid {
+            background: var(--success-bg);
+            color: var(--success);
+            display: block;
+        }
+
+        .gst-status.invalid {
+            background: var(--error-bg);
+            color: var(--error);
+            display: block;
+        }
+
+        .gst-status.checking {
+            background: #e0f2fe;
+            color: #0369a1;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-logo">📄</div>
+                <h1 class="auth-title">Create Account</h1>
+                <p class="auth-subtitle">Register your business for invoice generation</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('register') }}" id="registerForm">
+                <div class="form-group">
+                    <label class="form-label" for="email">Email Address *</label>
+                    <input type="email" id="email" name="email" class="form-input" placeholder="you@example.com"
+                        required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password *</label>
+                        <input type="password" id="password" name="password" class="form-input"
+                            placeholder="Min 6 characters" required minlength="6">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="confirm_password">Confirm Password *</label>
+                        <input type="password" id="confirm_password" name="confirm_password" class="form-input"
+                            placeholder="Re-enter password" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="business_name">Business Name *</label>
+                    <input type="text" id="business_name" name="business_name" class="form-input"
+                        placeholder="Your Business Name" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="business_address">Business Address *</label>
+                    <textarea id="business_address" name="business_address" class="form-input form-textarea"
+                        placeholder="Full business address" required rows="2"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="owner_name">Owner Name *</label>
+                        <input type="text" id="owner_name" name="owner_name" class="form-input"
+                            placeholder="Your full name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="mobile">Mobile Number *</label>
+                        <input type="tel" id="mobile" name="mobile" class="form-input" placeholder="10-digit mobile"
+                            required pattern="[0-9]{10}">
+                    </div>
+                </div>
+
+                <div class="form-group gst-verify-container">
+                    <label class="form-label" for="gst_number">GST Number (Optional)</label>
+                    <input type="text" id="gst_number" name="gst_number" class="form-input"
+                        placeholder="15-character GST number" maxlength="15" style="text-transform: uppercase;">
+                    <div id="gstStatus" class="gst-status"></div>
+                    <span class="form-hint">Format: 29ABCDE1234F1Z5 (Leave blank if not applicable)</span>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-large btn-full" style="margin-top: 24px;">
+                    Register
+                </button>
+            </form>
+
+            <div class="auth-link">
+                Already have an account? <a href="{{ url_for('login') }}">Login here</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // GST verification
+        const gstInput = document.getElementById('gst_number');
+        const gstStatus = document.getElementById('gstStatus');
+        let verifyTimeout;
+
+        gstInput.addEventListener('input', function () {
+            clearTimeout(verifyTimeout);
+            const gstNumber = this.value.trim().toUpperCase();
+
+            if (gstNumber.length === 0) {
+                gstStatus.className = 'gst-status';
+                gstStatus.textContent = '';
+                return;
+            }
+
+            if (gstNumber.length < 15) {
+                gstStatus.className = 'gst-status invalid';
+                gstStatus.textContent = 'GST number must be 15 characters';
+                return;
+            }
+
+            gstStatus.className = 'gst-status checking';
+            gstStatus.textContent = 'Verifying GST number...';
+
+            verifyTimeout = setTimeout(() => {
+                fetch('/api/verify-gst', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ gst_number: gstNumber })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.valid) {
+                            gstStatus.className = 'gst-status valid';
+                            gstStatus.textContent = '✓ Valid GST number';
+                        } else {
+                            gstStatus.className = 'gst-status invalid';
+                            gstStatus.textContent = '✗ ' + (data.error || 'Invalid GST number');
+                        }
+                    })
+                    .catch(error => {
+                        gstStatus.className = 'gst-status invalid';
+                        gstStatus.textContent = 'Verification failed';
+                    });
+            }, 500);
+        });
+
+        // Password confirmation
+        const form = document.getElementById('registerForm');
+        form.addEventListener('submit', function (e) {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('Passwords do not match!');
+                return false;
+            }
+        });
+    </script>
+</body>
+
+</html>
